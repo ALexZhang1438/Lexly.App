@@ -45,7 +45,7 @@ struct Config {
         
         // Modelos disponibles
         static let textModel = "gpt-3.5-turbo"
-        static let visionModel = "gpt-4-vision-preview"
+        static let visionModel = "gpt-4o"
         
         // Parámetros por defecto
         static let defaultTemperature: Double = 0.7

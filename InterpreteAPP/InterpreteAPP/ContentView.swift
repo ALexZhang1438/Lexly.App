@@ -11,6 +11,9 @@ struct ContentView: View {
     // MARK: - Estado de la Vista
     @StateObject private var chatViewModel = ChatViewModel()
     @StateObject private var uiState = UIState()
+    @State private var mostrarVistaPrevia = false
+    @State private var imagenTemporal: UIImage?
+
     
     var body: some View {
         NavigationStack {
@@ -33,6 +36,10 @@ struct ContentView: View {
                         isLoading: chatViewModel.isLoading
                     )
                     .background(Color.clear)
+                    .onTapGesture {
+                        // Ocultar teclado al tocar en el área del chat
+                        hideKeyboard()
+                    }
                     
                     // MARK: - Divisor con estilo
                     Divider()
@@ -81,12 +88,31 @@ struct ContentView: View {
                 ImagePicker(image: $uiState.imagenSeleccionada)
                     .onDisappear {
                         if let imagen = uiState.imagenSeleccionada {
-                            Task {
-                                await chatViewModel.enviarImagen(imagen)
-                            }
+                            imagenTemporal = imagen
+                            mostrarVistaPrevia = true
                             uiState.imagenSeleccionada = nil
                         }
                     }
+            }
+            .sheet(isPresented: $mostrarVistaPrevia) {
+                if let imagen = imagenTemporal {
+                    ImagePreviewView(
+                        image: imagen,
+                        onDismiss: {
+                            // El usuario cancela la vista previa
+                            mostrarVistaPrevia = false
+                            imagenTemporal = nil
+                        },
+                        onConfirm: {
+                            // El usuario confirma el envío
+                            Task {
+                                await chatViewModel.enviarImagen(imagen)
+                            }
+                            mostrarVistaPrevia = false
+                            imagenTemporal = nil
+                        }
+                    )
+                }
             }
             .alert("Error", isPresented: $chatViewModel.mostrarError) {
                 Button("OK") {
@@ -95,7 +121,16 @@ struct ContentView: View {
             } message: {
                 Text(chatViewModel.mensajeError)
             }
+            // Gesto global para ocultar teclado
+            .onTapGesture {
+                hideKeyboard()
+            }
         }
+    }
+    
+    // MARK: - Función para ocultar teclado
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 
@@ -111,6 +146,10 @@ struct ChatScrollView: View {
                     ForEach(mensajes) { mensaje in
                         BurbujaMensaje(mensaje: mensaje)
                             .id(mensaje.id)
+                            .onTapGesture {
+                                // Permitir selección de texto pero también ocultar teclado
+                                hideKeyboard()
+                            }
                     }
                     
                     if isLoading {
@@ -133,7 +172,6 @@ struct ChatScrollView: View {
     }
     
     private func scrollToBottom(proxy: ScrollViewProxy){
-    
         withAnimation(.easeInOut(duration: 0.5)) {
             if isLoading {
                 proxy.scrollTo("loading", anchor: .bottom)
@@ -141,6 +179,11 @@ struct ChatScrollView: View {
                 proxy.scrollTo(ultimo.id, anchor: .bottom)
             }
         }
+    }
+    
+    // MARK: - Función para ocultar teclado
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 

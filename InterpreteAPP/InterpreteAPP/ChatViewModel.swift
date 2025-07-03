@@ -46,6 +46,9 @@ class ChatViewModel: ObservableObject {
         do {
             let respuesta = try await apiService.generarExplicacion(para: textoUsuario)
             mensajes.append(Mensaje(texto: respuesta, esUsuario: false))
+            
+            // Ocultar teclado automáticamente cuando se recibe la respuesta
+            hideKeyboard()
         } catch {
             manejarError(error)
         }
@@ -59,6 +62,9 @@ class ChatViewModel: ObservableObject {
         do {
             let respuesta = try await apiService.analizarImagen(imagen)
             mensajes.append(Mensaje(texto: respuesta, esUsuario: false))
+            
+            // Ocultar teclado automáticamente cuando se recibe la respuesta
+            hideKeyboard()
         } catch {
             manejarError(error)
         }
@@ -114,6 +120,11 @@ class ChatViewModel: ObservableObject {
                 self.rateLimiter.resetearContador()
             }
         }
+    }
+    
+    // MARK: - Función para ocultar teclado
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 
