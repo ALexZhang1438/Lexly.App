@@ -14,9 +14,34 @@ import AVKit
 
 /// Estructura que representa un mensaje individual en el chat
 struct Mensaje: Identifiable {
-    let id = UUID() // Identificador único para cada mensaje (requerido por Identifiable)
-    let texto: String // Contenido del mensaje
-    let esUsuario: Bool // true si el mensaje fue enviado por el usuario, false si es del asistente
+    let id = UUID()
+    let texto: String
+    let esUsuario: Bool
+    let timestamp: Date = Date()
+}
+
+/// Enum para manejar diferentes tipos de errores
+enum ErroresApp: LocalizedError {
+    case apiKeyFaltante
+    case networkError
+    case invalidResponse
+    case contentFiltered
+    case rateLimitExceeded
+    
+    var errorDescription: String? {
+        switch self {
+        case .apiKeyFaltante:
+            return "Configuración de API no encontrada"
+        case .networkError:
+            return "Error de conexión. Verifica tu internet"
+        case .invalidResponse:
+            return "Respuesta inválida del servidor"
+        case .contentFiltered:
+            return "Contenido filtrado por políticas de seguridad"
+        case .rateLimitExceeded:
+            return "Demasiadas consultas. Espera un momento"
+        }
+    }
 }
 
 // MARK: - Componentes de UI
@@ -27,10 +52,8 @@ struct BurbujaMensaje: View {
 
     var body: some View {
         HStack {
-            // Condicional para determinar la alineación del mensaje
             if mensaje.esUsuario {
-                // Mensajes del usuario: alineados a la derecha, fondo azul
-                Spacer() // Empuja el contenido hacia la derecha
+                Spacer()
                 Text(mensaje.texto)
                     .padding()
                     .background(Color.blue)
@@ -38,153 +61,242 @@ struct BurbujaMensaje: View {
                     .cornerRadius(12)
                     .frame(maxWidth: 250, alignment: .trailing)
             } else {
-                // Mensajes del asistente: alineados a la izquierda, fondo gris
                 Text(mensaje.texto)
                     .padding()
                     .background(Color.gray.opacity(0.2))
                     .foregroundColor(.black)
                     .cornerRadius(12)
                     .frame(maxWidth: 250, alignment: .leading)
-                Spacer() // Empuja el contenido hacia la izquierda
+                Spacer()
             }
         }
         .padding(.horizontal)
-        .transition(.move(edge: .bottom)) // Animación cuando aparece el mensaje
+        .transition(.move(edge: .bottom))
+    }
+}
+
+/// Vista para mostrar indicador de carga
+struct IndicadorCarga: View {
+    var body: some View {
+        HStack {
+            Text("Procesando...")
+                .foregroundColor(.gray)
+            ProgressView()
+                .scaleEffect(0.8)
+        }
+        .padding()
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(12)
+        .frame(maxWidth: 250, alignment: .leading)
+        .padding(.horizontal)
     }
 }
 
 // MARK: - Vista Principal
 
-/// Vista principal de la aplicación de chat legal
 struct ContentView: View {
     // MARK: - Estados de la Vista
     
-    @State private var entradaTexto = "" // Texto que el usuario está escribiendo
-    @State private var mensajes: [Mensaje] = [] // Array de todos los mensajes del chat
-    @State private var saludoMostrado = false // Flag para mostrar el saludo inicial solo una vez
-    @State private var mostrarPicker = false // Controla si se muestra el selector de imágenes
-    @State private var imagenSeleccionada: UIImage? // Imagen seleccionada por el usuario
-
+    @State private var entradaTexto = ""
+    @State private var mensajes: [Mensaje] = []
+    @State private var saludoMostrado = false
+    @State private var mostrarPicker = false
+    @State private var imagenSeleccionada: UIImage?
+    
+    // MARK: - Nuevos Estados para Mejoras
+    
+    @State private var isLoading = false
+    @State private var mostrarError = false
+    @State private var mensajeError = ""
+    @State private var contadorMensajes = 0
+    @State private var ultimoMensaje: Date = Date()
+    
+    // MARK: - Constantes
+    
+    private let maxMensajesPorMinuto = 10
+    private let tiempoMinimoEntreMensajes: TimeInterval = 2.0
+    
     var body: some View {
         NavigationStack {
             VStack {
-                // MARK: - Área de Chat (ScrollView)
+                // MARK: - Área de Chat
                 
-                ScrollViewReader { proxy in // Permite hacer scroll programáticamente
+                ScrollViewReader { proxy in
                     ScrollView {
                         VStack(spacing: 12) {
-                            // Renderiza todos los mensajes usando ForEach
                             ForEach(mensajes) { mensaje in
                                 BurbujaMensaje(mensaje: mensaje)
                             }
+                            
+                            // Mostrar indicador de carga
+                            if isLoading {
+                                IndicadorCarga()
+                                    .id("loading")
+                            }
                         }
                         .padding(.vertical)
-                        // Observer que detecta cuando se añaden nuevos mensajes
                         .onChange(of: mensajes.count) {
-                            // Hace scroll automático al último mensaje
                             if let ultimo = mensajes.last {
-                                withAnimation {
+                                withAnimation(.easeInOut(duration: 0.5)) {
                                     proxy.scrollTo(ultimo.id, anchor: .bottom)
+                                }
+                            }
+                        }
+                        .onChange(of: isLoading) {
+                            if isLoading {
+                                withAnimation(.easeInOut(duration: 0.5)) {
+                                    proxy.scrollTo("loading", anchor: .bottom)
                                 }
                             }
                         }
                     }
                 }
 
-                Divider() // Línea separadora entre chat y área de entrada
+                Divider()
 
                 // MARK: - Área de Entrada de Texto
                 
                 HStack {
-                    // Campo de texto multilínea para escribir mensajes
                     TextField("Escribe o pega el texto legal...", text: $entradaTexto, axis: .vertical)
                         .textFieldStyle(.roundedBorder)
-                        .lineLimit(3) // Máximo 3 líneas visibles
+                        .lineLimit(3)
+                        .disabled(isLoading)
                     
-                    // Botón para adjuntar imágenes
                     Button {
-                        mostrarPicker = true // Activa el selector de imágenes
+                        mostrarPicker = true
                     } label: {
                         Image(systemName: "photo.on.rectangle")
                             .symbolRenderingMode(.hierarchical)
                             .font(.system(size: 24))
-                            .foregroundColor(.gray)
+                            .foregroundColor(isLoading ? .gray : .blue)
                     }
-                    .accessibilityLabel("Adjuntar imagen") // Para accesibilidad
+                    .disabled(isLoading)
+                    .accessibilityLabel("Adjuntar imagen")
 
-                    // Botón para enviar mensaje
                     Button {
-                        enviarMensaje() // Llama a la función para enviar mensaje
+                        Task {
+                            await enviarMensaje()
+                        }
                     } label: {
-                        Image(systemName: "paperplane.circle.fill")
+                        Image(systemName: isLoading ? "stop.circle.fill" : "paperplane.circle.fill")
                             .symbolRenderingMode(.palette)
-                            .foregroundStyle(.white, .blue)
+                            .foregroundStyle(.white, isLoading ? .red : .blue)
                             .font(.system(size: 28))
                     }
-                    .accessibilityLabel("Enviar mensaje") // Para accesibilidad
+                    .disabled(entradaTexto.trimmingCharacters(in: .whitespaces).isEmpty && !isLoading)
+                    .accessibilityLabel(isLoading ? "Cancelar" : "Enviar mensaje")
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 10)
             }
-            .navigationTitle("Asistente Legal") // Título de la barra de navegación
-            
-            // MARK: - Eventos del Ciclo de Vida
-            
+            .navigationTitle("Asistente Legal")
             .onAppear {
-                // Se ejecuta cuando la vista aparece por primera vez
                 if !saludoMostrado {
-                    mostrarSaludoInicial() // Muestra el mensaje de bienvenida
+                    mostrarSaludoInicial()
                     saludoMostrado = true
                 }
             }
-            
-            // MARK: - Selector de Imágenes (Sheet)
-            
             .sheet(isPresented: $mostrarPicker) {
-                // Presenta el selector de imágenes como una modal
                 ImagePicker(image: $imagenSeleccionada)
                     .onDisappear {
-                        // Se ejecuta cuando se cierra el selector
                         if let imagen = imagenSeleccionada {
-                            enviarImagen(imagen) // Procesa la imagen seleccionada
+                            Task {
+                                await enviarImagen(imagen)
+                            }
                         }
                     }
+            }
+            .alert("Error", isPresented: $mostrarError) {
+                Button("OK") {
+                    mostrarError = false
+                }
+            } message: {
+                Text(mensajeError)
             }
         }
     }
 
     // MARK: - Funciones Auxiliares
 
-    /// Función que maneja el envío de mensajes de texto
-    func enviarMensaje() {
-        // Verifica que el texto no esté vacío
+    /// Función que maneja el envío de mensajes con validación y rate limiting
+    func enviarMensaje() async {
+        // Validar entrada
         guard !entradaTexto.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-
-        // Limpia espacios en blanco del texto
+        
+        // Rate limiting
+        if !validarRateLimit() {
+            mostrarErrorPersonalizado(.rateLimitExceeded)
+            return
+        }
+        
         let textoUsuario = entradaTexto.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        // Añade el mensaje del usuario al array de mensajes
-        mensajes.append(Mensaje(texto: textoUsuario, esUsuario: true))
+        // Filtrar contenido inapropiado
+        if contienePalabrasFiltradas(textoUsuario) {
+            mostrarErrorPersonalizado(.contentFiltered)
+            return
+        }
         
-        // Limpia el campo de entrada
+        // Añadir mensaje del usuario
+        mensajes.append(Mensaje(texto: textoUsuario, esUsuario: true))
         entradaTexto = ""
-
-        // Simula un pequeño retraso antes de generar la respuesta del asistente
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            generarExplicacionIA(para: textoUsuario) { respuesta in
-                // Añade la respuesta del asistente cuando se recibe
-                mensajes.append(Mensaje(texto: respuesta, esUsuario: false))
+        isLoading = true
+        
+        do {
+            let respuesta = try await generarExplicacionIA(para: textoUsuario)
+            mensajes.append(Mensaje(texto: respuesta, esUsuario: false))
+        } catch {
+            if let appError = error as? ErroresApp {
+                mostrarErrorPersonalizado(appError)
+            } else {
+                mostrarErrorPersonalizado(.networkError)
             }
+        }
+        
+        isLoading = false
+    }
+
+    /// Valida si se puede enviar un mensaje (rate limiting)
+    private func validarRateLimit() -> Bool {
+        let ahora = Date()
+        
+        // Verificar tiempo mínimo entre mensajes
+        if ahora.timeIntervalSince(ultimoMensaje) < tiempoMinimoEntreMensajes {
+            return false
+        }
+        
+        // Verificar límite por minuto (simplificado)
+        contadorMensajes += 1
+        ultimoMensaje = ahora
+        
+        if contadorMensajes > maxMensajesPorMinuto {
+            return false
+        }
+        
+        return true
+    }
+
+    /// Filtro básico de contenido inapropiado
+    private func contienePalabrasFiltradas(_ texto: String) -> Bool {
+        let palabrasFiltradas = ["spam", "test repetitivo"] // Expandir según necesidades
+        let textoMinuscula = texto.lowercased()
+        
+        return palabrasFiltradas.contains { palabra in
+            textoMinuscula.contains(palabra)
         }
     }
 
-    /// Muestra el mensaje de saludo inicial según el idioma del dispositivo
-    func mostrarSaludoInicial() {
-        // Detecta el idioma del dispositivo
-        let idioma = Locale.current.language.languageCode?.identifier ?? "es"
+    /// Muestra errores personalizados
+    private func mostrarErrorPersonalizado(_ error: ErroresApp) {
+        mensajeError = error.localizedDescription
+        mostrarError = true
+    }
 
-        // Selecciona el saludo apropiado según el idioma
+    /// Muestra el mensaje de saludo inicial
+    func mostrarSaludoInicial() {
+        let idioma = Locale.current.language.languageCode?.identifier ?? "es"
         let saludo: String
+        
         switch idioma {
         case "en":
             saludo = "👋 Hello! I'm your legal assistant. Paste any legal text and I'll explain it in simple terms."
@@ -193,118 +305,157 @@ struct ContentView: View {
         default:
             saludo = "👋 ¡Hola! Soy tu asistente legal. Pega un texto legal y te lo explicaré con palabras sencillas."
         }
-
-        // Añade el saludo como primer mensaje del asistente
+        
         mensajes.append(Mensaje(texto: saludo, esUsuario: false))
     }
 
-    /// Función que hace la llamada a la API de OpenAI para generar explicaciones
-    /// - Parameters:
-    ///   - texto: El texto legal que necesita explicación
-    ///   - completion: Closure que se ejecuta cuando se recibe la respuesta
-    func generarExplicacionIA(para texto: String, completion: @escaping (String) -> Void) {
-        // Configura la URL de la API de OpenAI
-        guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else { return }
+    /// Función mejorada para generar explicaciones con manejo robusto de errores
+    func generarExplicacionIA(para texto: String) async throws -> String {
+        // Validar configuración
+        guard !Config.openAIAPIKey.isEmpty else {
+            throw ErroresApp.apiKeyFaltante
+        }
+        
+        guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
+            throw ErroresApp.networkError
+        }
 
-        // Headers requeridos para la autenticación y tipo de contenido
         let headers = [
-            "Authorization": "Bearer \(openAIAPIKey)", // Clave de API (debe estar definida en otro archivo)
+            "Authorization": "Bearer \(Config.openAIAPIKey)",
             "Content-Type": "application/json"
         ]
 
-        // Construye el prompt del usuario (función debe estar definida en otro lugar)
         let userPrompt = construirUserPrompt(con: texto)
-
-        // Cuerpo de la petición HTTP con los parámetros de la API
         let body: [String: Any] = [
-            "model": "gpt-3.5-turbo", // Modelo de IA a utilizar
+            "model": "gpt-3.5-turbo",
             "messages": [
-                ["role": "system", "content": systemPrompt], // Prompt del sistema (debe estar definido)
-                ["role": "user", "content": userPrompt] // Prompt del usuario
+                ["role": "system", "content": systemPrompt],
+                ["role": "user", "content": userPrompt]
             ],
-            "temperature": 0.7 // Controla la creatividad de las respuestas (0-1)
+            "temperature": 0.7,
+            "max_tokens": 1000
         ]
 
-        // Convierte el diccionario a JSON
-        let jsonData = try! JSONSerialization.data(withJSONObject: body)
+        // Manejo seguro de JSON
+        let jsonData: Data
+        do {
+            jsonData = try JSONSerialization.data(withJSONObject: body)
+        } catch {
+            throw ErroresApp.invalidResponse
+        }
 
-        // Configura la petición HTTP
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = headers
         request.httpBody = jsonData
+        request.timeoutInterval = 30
 
-        // Ejecuta la petición de red de forma asíncrona
-        URLSession.shared.dataTask(with: request) { data, _, _ in
-            // Procesa la respuesta de la API
-            if let data = data,
-               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let choices = json["choices"] as? [[String: Any]],
-               let message = choices.first?["message"] as? [String: Any],
-               let content = message["content"] as? String {
-                
-                // Ejecuta el completion en el hilo principal con la respuesta
-                DispatchQueue.main.async {
-                    completion(content.trimmingCharacters(in: .whitespacesAndNewlines))
-                }
-            } else {
-                // Maneja errores mostrando un mensaje de error
-                DispatchQueue.main.async {
-                    completion("⚠️ Hubo un error al obtener la explicación del asistente.")
+        // Realizar petición con async/await
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            // Verificar respuesta HTTP
+            if let httpResponse = response as? HTTPURLResponse {
+                if httpResponse.statusCode == 429 {
+                    throw ErroresApp.rateLimitExceeded
+                } else if httpResponse.statusCode >= 400 {
+                    throw ErroresApp.networkError
                 }
             }
-        }.resume() // Inicia la petición
+            
+            // Procesar respuesta JSON
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let choices = json["choices"] as? [[String: Any]],
+                  let message = choices.first?["message"] as? [String: Any],
+                  let content = message["content"] as? String else {
+                throw ErroresApp.invalidResponse
+            }
+            
+            let respuestaLimpia = content.trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            // Validar respuesta
+            if respuestaLimpia.isEmpty || respuestaLimpia.count > 5000 {
+                throw ErroresApp.invalidResponse
+            }
+            
+            return respuestaLimpia
+            
+        } catch {
+            if error is ErroresApp {
+                throw error
+            } else {
+                throw ErroresApp.networkError
+            }
+        }
     }
 
-    /// Función que procesa y envía imágenes a la API de OpenAI Vision
-    /// - Parameter imagen: La imagen seleccionada por el usuario
-    func enviarImagen(_ imagen: UIImage) {
-        // Convierte la imagen a base64 y configura la URL
-        guard let imageData = imagen.jpegData(compressionQuality: 0.8)?.base64EncodedString(),
-              let url = URL(string: "https://api.openai.com/v1/chat/completions") else { return }
+    /// Función mejorada para enviar imágenes
+    func enviarImagen(_ imagen: UIImage) async {
+        // Optimizar compresión según tamaño
+        let compressionQuality: CGFloat = imagen.size.width > 1000 ? 0.5 : 0.8
+        
+        guard let imageData = imagen.jpegData(compressionQuality: compressionQuality)?.base64EncodedString(),
+              let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
+            mostrarErrorPersonalizado(.invalidResponse)
+            return
+        }
 
-        // Headers para la autenticación
+        isLoading = true
+        
         let headers = [
-            "Authorization": "Bearer \(openAIAPIKey)",
+            "Authorization": "Bearer \(Config.openAIAPIKey)",
             "Content-Type": "application/json"
         ]
 
-        // Cuerpo de la petición para análisis de imágenes
         let body: [String: Any] = [
-            "model": "gpt-4-vision-preview", // Modelo específico para análisis de imágenes
+            "model": "gpt-4-vision-preview",
             "messages": [
                 ["role": "user",
                  "content": [
-                    ["type": "text", "text": "Describe el contenido de esta imagen en términos legales si aplica."],
+                    ["type": "text", "text": "Analiza esta imagen en términos legales si aplica. Sé conciso y claro."],
                     ["type": "image_url", "image_url": ["url": "data:image/jpeg;base64,\(imageData)"]]
                  ]
                 ]
             ],
-            "max_tokens": 1000 // Límite de tokens para la respuesta
+            "max_tokens": 1000
         ]
 
-        // Convierte a JSON y configura la petición
-        let jsonData = try! JSONSerialization.data(withJSONObject: body)
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: body)
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.allHTTPHeaderFields = headers
+            request.httpBody = jsonData
+            request.timeoutInterval = 45
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = headers
-        request.httpBody = jsonData
-
-        // Ejecuta la petición para análisis de imagen
-        URLSession.shared.dataTask(with: request) { data, _, _ in
-            // Procesa la respuesta del análisis de imagen
-            if let data = data,
-               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let (data, _) = try await URLSession.shared.data(for: request)
+            
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let choices = json["choices"] as? [[String: Any]],
                let message = choices.first?["message"] as? [String: Any],
                let content = message["content"] as? String {
                 
-                // Añade la respuesta del análisis como nuevo mensaje
-                DispatchQueue.main.async {
-                    mensajes.append(Mensaje(texto: content, esUsuario: false))
-                }
+                let respuestaLimpia = content.trimmingCharacters(in: .whitespacesAndNewlines)
+                mensajes.append(Mensaje(texto: respuestaLimpia, esUsuario: false))
+            } else {
+                throw ErroresApp.invalidResponse
             }
-        }.resume()
+        } catch {
+            mostrarErrorPersonalizado(.networkError)
+        }
+        
+        isLoading = false
+    }
+}
+
+// MARK: - Extensiones
+
+extension ContentView {
+    /// Resetea el contador de mensajes cada minuto
+    private func resetearContadorMensajes() {
+        Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+            contadorMensajes = 0
+        }
     }
 }

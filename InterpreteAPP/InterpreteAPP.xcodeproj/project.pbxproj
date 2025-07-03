@@ -95,9 +95,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		0B7453242E11E4A8004FD97A /* InterpreteAPP */ = {
+		0B7453242E11E4A8004FD97A /* Lexly */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 0B7453492E11E4AA004FD97A /* Build configuration list for PBXNativeTarget "InterpreteAPP" */;
+			buildConfigurationList = 0B7453492E11E4AA004FD97A /* Build configuration list for PBXNativeTarget "Lexly" */;
 			buildPhases = (
 				0B7453212E11E4A8004FD97A /* Sources */,
 				0B7453222E11E4A8004FD97A /* Frameworks */,
@@ -110,7 +110,7 @@
 			fileSystemSynchronizedGroups = (
 				0B7453272E11E4A8004FD97A /* InterpreteAPP */,
 			);
-			name = InterpreteAPP;
+			name = Lexly;
 			packageProductDependencies = (
 			);
 			productName = InterpreteAPP;
@@ -200,7 +200,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				0B7453242E11E4A8004FD97A /* InterpreteAPP */,
+				0B7453242E11E4A8004FD97A /* Lexly */,
 				0B7453342E11E4AA004FD97A /* InterpreteAPPTests */,
 				0B74533E2E11E4AA004FD97A /* InterpreteAPPUITests */,
 			);
@@ -258,12 +258,12 @@
 /* Begin PBXTargetDependency section */
 		0B7453372E11E4AA004FD97A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 0B7453242E11E4A8004FD97A /* InterpreteAPP */;
+			target = 0B7453242E11E4A8004FD97A /* Lexly */;
 			targetProxy = 0B7453362E11E4AA004FD97A /* PBXContainerItemProxy */;
 		};
 		0B7453412E11E4AA004FD97A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 0B7453242E11E4A8004FD97A /* InterpreteAPP */;
+			target = 0B7453242E11E4A8004FD97A /* Lexly */;
 			targetProxy = 0B7453402E11E4AA004FD97A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -412,7 +412,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = interprete.interpreteapp;
+				PRODUCT_BUNDLE_IDENTIFIER = ALexZhang.LexlyApp;
 				PRODUCT_NAME = Lexly;
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -451,7 +451,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = interprete.interpreteapp;
+				PRODUCT_BUNDLE_IDENTIFIER = ALexZhang.LexlyApp;
 				PRODUCT_NAME = Lexly;
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -565,7 +565,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		0B7453492E11E4AA004FD97A /* Build configuration list for PBXNativeTarget "InterpreteAPP" */ = {
+		0B7453492E11E4AA004FD97A /* Build configuration list for PBXNativeTarget "Lexly" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0B74534A2E11E4AA004FD97A /* Debug */,
