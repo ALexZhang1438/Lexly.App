@@ -63,8 +63,8 @@ struct ImagePicker: UIViewControllerRepresentable {
         }
         
         private func optimizarImagen(_ imagen: UIImage) -> UIImage {
-            let maxSize = ApiConfig.maxImageSize
-            let compressionQuality = ApiConfig.imageCompressionQuality
+                    let maxSize = Config.API.maxImageSize
+        let compressionQuality = Config.API.imageCompressionQuality
             
             // Redimensionar si es necesario
             let imagenRedimensionada: UIImage

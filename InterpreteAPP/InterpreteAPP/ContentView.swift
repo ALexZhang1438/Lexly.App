@@ -68,7 +68,7 @@ struct ContentView: View {
                     .padding(.bottom, 8)
                 }
             }
-            .navigationTitle("Asistente Legal")
+            .navigationTitle("Lexly.APP")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -80,7 +80,19 @@ struct ContentView: View {
                     }
                     .disabled(chatViewModel.mensajes.isEmpty)
                 }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        withAnimation {
+                            chatViewModel.idiomaActual = (chatViewModel.idiomaActual == "es") ? "zh" : "es"
+                            chatViewModel.limpiarChat()
+                        }
+                    } label: {
+                        Image(systemName: "globe")
+                            .foregroundColor(.blue)
+                    }
+                }
             }
+            
             .onAppear {
                 chatViewModel.inicializar()
             }
@@ -126,11 +138,6 @@ struct ContentView: View {
                 hideKeyboard()
             }
         }
-    }
-    
-    // MARK: - Función para ocultar teclado
-    private func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 
@@ -179,11 +186,6 @@ struct ChatScrollView: View {
                 proxy.scrollTo(ultimo.id, anchor: .bottom)
             }
         }
-    }
-    
-    // MARK: - Función para ocultar teclado
-    private func hideKeyboard() {
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 

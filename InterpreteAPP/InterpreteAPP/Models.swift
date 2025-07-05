@@ -8,33 +8,44 @@
 import Foundation
 
 // MARK: - Modelo de Mensaje
+// Esta estructura representa un mensaje individual en el chat
+// Se usa para mostrar mensajes del usuario y del asistente
 struct Mensaje: Identifiable, Equatable {
-    let id = UUID()
-    let texto: String
-    let esUsuario: Bool
-    let timestamp: Date
+    let id = UUID()           // Identificador único del mensaje
+    let texto: String         // Contenido del mensaje
+    let esUsuario: Bool       // true si es del usuario, false si es del asistente
+    let timestamp: Date       // Fecha y hora cuando se creó el mensaje
     
+    /// Inicializador del mensaje
+    /// - Parameters:
+    ///   - texto: El contenido del mensaje
+    ///   - esUsuario: Indica si el mensaje es del usuario o del asistente
     init(texto: String, esUsuario: Bool) {
         self.texto = texto
         self.esUsuario = esUsuario
-        self.timestamp = Date()
+        self.timestamp = Date()  // Se asigna automáticamente la fecha actual
     }
     
+    /// Compara dos mensajes para verificar si son iguales
+    /// Se usa para optimizar la UI y evitar re-renderizados innecesarios
     static func == (lhs: Mensaje, rhs: Mensaje) -> Bool {
         lhs.id == rhs.id
     }
 }
 
 // MARK: - Tipos de Error
+// Esta enumeración define todos los tipos de errores que pueden ocurrir en la app
+// Cada error tiene un mensaje descriptivo y una sugerencia de recuperación
 enum ErroresApp: LocalizedError {
-    case apiKeyFaltante
-    case networkError
-    case invalidResponse
-    case contentFiltered
-    case rateLimitExceeded
-    case imageProcessingError
-    case generalError(String)
+    case apiKeyFaltante          // La clave API no está configurada o es inválida
+    case networkError            // Error de conexión a internet
+    case invalidResponse         // La respuesta del servidor no tiene el formato esperado
+    case contentFiltered         // El contenido fue filtrado por políticas de seguridad
+    case rateLimitExceeded       // Se excedió el límite de peticiones por minuto
+    case imageProcessingError    // Error al procesar una imagen
+    case generalError(String)    // Error general con mensaje personalizado
     
+    /// Descripción del error que se muestra al usuario
     var errorDescription: String? {
         switch self {
         case .apiKeyFaltante:
@@ -54,6 +65,8 @@ enum ErroresApp: LocalizedError {
         }
     }
     
+    /// Sugerencia de cómo resolver el error
+    /// Ayuda al usuario a entender qué puede hacer para solucionarlo
     var recoverySuggestion: String? {
         switch self {
         case .apiKeyFaltante:
@@ -74,48 +87,22 @@ enum ErroresApp: LocalizedError {
     }
 }
 
-// MARK: - Configuración
-struct ApiConfig {
-    static let openAIAPIKey = Secret.openAIAPIKey
-    static let maxTokens = 1000
-    static let temperature: Double = 0.7
-    static let maxImageSize: CGFloat = 1024
-    static let imageCompressionQuality: CGFloat = 0.8
-}
-
-// MARK: - Constantes de la App
-struct AppConstants {
-    static let maxMensajesPorMinuto = 10
-    static let tiempoMinimoEntreMensajes: TimeInterval = 2.0
-    static let maxLongitudTexto = 5000
-    static let maxMensajesEnMemoria = 100
-    
-    // Animaciones
-    static let animacionDuracion: Double = 0.3
-    static let animacionRebote: Double = 0.5
-    
-    // Colores
-    static let colorPrimario = "AccentColor"
-    static let colorSecundario = "SecondaryColor"
-}
-
-// MARK: - Estados de la App
-enum AppState {
-    case idle
-    case loading
-    case processing
-    case error(ErroresApp)
-    case success
-}
+// MARK: - Configuración (Consolidada en Config.swift)
+// Las configuraciones se han movido a Config.swift para evitar duplicación
 
 // MARK: - Extensiones Útiles
+
+// MARK: - Extensión de Date para formateo
+// Añade funcionalidad de formateo de fechas a la clase Date
 extension Date {
+    /// Formatea la fecha para mostrar solo la hora (ej: "14:30")
     func formatoHora() -> String {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
         return formatter.string(from: self)
     }
     
+    /// Formatea la fecha para mostrar fecha y hora completas (ej: "15 Ene 2024, 14:30")
     func formatoCompleto() -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -124,15 +111,22 @@ extension Date {
     }
 }
 
+// MARK: - Extensión de String para utilidades
+// Añade funcionalidades útiles para el procesamiento de texto
 extension String {
+    /// Elimina espacios en blanco al inicio y final del texto
     func limpiarTexto() -> String {
         return self.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
+    /// Verifica si el texto está vacío después de limpiarlo
     var esVacio: Bool {
         return self.limpiarTexto().isEmpty
     }
     
+    /// Limita la longitud del texto y añade "..." si es muy largo
+    /// - Parameter limite: La longitud máxima permitida
+    /// - Returns: El texto truncado si es necesario
     func limitarLongitud(_ limite: Int) -> String {
         if self.count > limite {
             return String(self.prefix(limite)) + "..."
