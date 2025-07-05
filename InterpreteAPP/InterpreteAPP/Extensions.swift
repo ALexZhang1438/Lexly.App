@@ -147,57 +147,9 @@ extension Array where Element == Mensaje {
 }
 
 // MARK: - Modificadores de Vista Personalizados
-struct ShimmerEffect: ViewModifier {
-    @State private var phase: CGFloat = 0
-    
-    func body(content: Content) -> some View {
-        content
-            .overlay(
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [.clear, .white.opacity(0.4), .clear]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .offset(x: phase)
-                    .animation(.linear(duration: 1.5).repeatForever(autoreverses: false), value: phase)
-            )
-            .onAppear {
-                phase = 300
-            }
-    }
-}
-
-struct GlowEffect: ViewModifier {
-    let color: Color
-    let radius: CGFloat
-    
-    func body(content: Content) -> some View {
-        content
-            .shadow(color: color.opacity(0.6), radius: radius, x: 0, y: 0)
-            .shadow(color: color.opacity(0.3), radius: radius * 2, x: 0, y: 0)
-    }
-}
-
-extension View {
-    func shimmer() -> some View {
-        self.modifier(ShimmerEffect())
-    }
-    
-    func glow(color: Color = .blue, radius: CGFloat = 4) -> some View {
-        self.modifier(GlowEffect(color: color, radius: radius))
-    }
-}
-
-// MARK: - Utilitarios de Haptic Feedback
+// Nota: Los efectos ShimmerEffect, GlowEffect y HapticFeedback han sido removidos
+// ya que no se utilizan en la aplicación actual
 struct HapticFeedback {
-    static func light() {
-        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-        impactFeedback.impactOccurred()
-    }
-    
     static func medium() {
         let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
         impactFeedback.impactOccurred()
