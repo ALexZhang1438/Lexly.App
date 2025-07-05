@@ -26,28 +26,6 @@ class OpenAIService {
         self.session = URLSession(configuration: config)
     }
     
-    // MARK: - Función principal para generar explicaciones de texto
-    /// Genera una explicación de texto legal usando la API de OpenAI
-    /// - Parameter texto: El texto legal que se quiere explicar
-    /// - Returns: Una explicación clara y simple del texto legal
-    /// - Throws: Errores de red, API, o validación
-    func generarExplicacion(para texto: String) async throws -> String {
-        // Verificar que la API key esté configurada antes de hacer la petición
-        guard !Config.openAIAPIKey.isEmpty else {
-            throw ErroresApp.apiKeyFaltante
-        }
-        
-        // Construir y enviar la petición HTTP
-        let request = try construirRequest(para: texto)
-        let (data, response) = try await session.data(for: request)
-        
-        // Validar la respuesta del servidor
-        try validarRespuesta(response)
-        
-        // Procesar y retornar la respuesta
-        return try procesarRespuesta(data)
-    }
-    
     // MARK: - Función para analizar imágenes
     /// Analiza una imagen y genera una explicación legal si aplica
     /// - Parameter imagen: La imagen UIImage que se quiere analizar
@@ -66,40 +44,6 @@ class OpenAIService {
         // Validar y procesar la respuesta
         try validarRespuesta(response)
         return try procesarRespuesta(data)
-    }
-    
-    // MARK: - Métodos Privados para construir peticiones
-    
-    /// Construye una petición HTTP para enviar texto a la API de OpenAI
-    /// - Parameter texto: El texto que se quiere procesar
-    /// - Returns: URLRequest configurado para la API de OpenAI
-    /// - Throws: Errores de construcción de petición
-    private func construirRequest(para texto: String) throws -> URLRequest {
-        // Crear la URL del endpoint de chat completions
-        guard let url = URL(string: "https://api.openai.com/v1/chat/completions") else {
-            throw ErroresApp.networkError
-        }
-        
-        // Configurar la petición HTTP
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("Bearer \(Config.openAIAPIKey)", forHTTPHeaderField: "Authorization") // Autenticación con API key
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type") // Tipo de contenido JSON
-        
-        // Construir el cuerpo de la petición en formato JSON
-        let body: [String: Any] = [
-            "model": "gpt-3.5-turbo", // Modelo de OpenAI a usar
-            "messages": [
-                ["role": "system", "content": PromptHelper.systemPrompt], // Prompt del sistema que define el comportamiento
-                ["role": "user", "content": PromptHelper.construirUserPrompt(con: texto)] // Mensaje del usuario
-            ],
-            "temperature": 0.7, // Controla la creatividad (0.0 = conservador, 1.0 = creativo)
-            "max_tokens": 1000  // Máximo número de tokens en la respuesta
-        ]
-        
-        // Convertir el cuerpo a datos JSON
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        return request
     }
     
     /// Construye una petición HTTP para analizar imágenes con la API de OpenAI
@@ -263,9 +207,9 @@ struct LocalizationHelper {
         let idioma = idioma ?? String(Locale.preferredLanguages.first?.prefix(2) ?? "es")
         switch idioma {
         case "zh":
-            return "👋 你好！我是你的法律助手。请发送法律文本，我会用简单的语言帮你解释。"
+            return "👋 你好呀！我是 Lexly，你的贴心法律小助手。专门帮你解答关于西班牙税务和劳动方面的问题。有什么需要，随时发给我，我会用简单易懂的话为你解释清楚～ \n 温馨提示：本应用仍处于持续优化阶段，可能会出现解释不准确或出错的情况。对于重要或复杂的法律问题，建议您咨询专业律师或相关领域的专家，以确保获得最准确的解答"
         case "es":
-            return "👋 ¡Hola! Soy tu asistente legal. Envíame cualquier texto legal y te lo explicaré con palabras sencillas."
+            return "👋 ¡Hola! Soy Lexly, tu asistente legal de confianza. Estoy aquí para ayudarte con cualquier duda sobre temas fiscales o laborales en España. Envíame lo que necesites y te lo explicaré de forma clara y sencilla. \n Aviso: Esta aplicación aún se encuentra en fase de mejora continua, por lo que podría contener errores o interpretaciones inexactas. Para cuestiones legales importantes o complejas, se recomienda consultar con un abogado o experto especializado para obtener asesoramiento preciso."
         default:
             return "👋 Hello! I'm your legal assistant. Send me any legal text and I'll explain it in simple terms."
         }

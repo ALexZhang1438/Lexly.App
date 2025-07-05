@@ -74,7 +74,7 @@ struct AssistantMessageBubble: View {
                 )
                 .frame(width: 32, height: 32)
                 .overlay(
-                    Image(systemName: "scales.of.justice")
+                    Image(systemName: "person.text.rectangle")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.white)
                 )
@@ -139,7 +139,7 @@ struct IndicadorCarga: View {
                 )
                 .frame(width: 32, height: 32)
                 .overlay(
-                    Image(systemName: "scales.of.justice")
+                    Image(systemName: "person.text.rectangle")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.white)
                 )
