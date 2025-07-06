@@ -13,7 +13,12 @@ struct ContentView: View {
     @StateObject private var uiState = UIState()
     @State private var mostrarVistaPrevia = false
     @State private var imagenTemporal: UIImage?
+    @State private var mostrarFormularioReporte = false
+    @State private var cambiandoIdioma = false
 
+    var idiomaSiguiente: String {
+        return chatViewModel.idiomaActual == "es" ? "zh" : "es"
+    }
     
     var body: some View {
         NavigationStack {
@@ -67,6 +72,13 @@ struct ContentView: View {
                     .padding(.horizontal)
                     .padding(.bottom, 8)
                 }
+                if chatViewModel.cambiandoIdioma {
+                       Color.black.opacity(0.4)
+                           .ignoresSafeArea()
+
+                       BookLoadingView() // o cualquier vista que represente la animación
+                           .transition(.scale)
+                   }
             }
             .navigationTitle("Lexly.APP")
             .navigationBarTitleDisplayMode(.inline)
@@ -81,16 +93,22 @@ struct ContentView: View {
                     .disabled(chatViewModel.mensajes.isEmpty)
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        withAnimation {
-                            chatViewModel.idiomaActual = (chatViewModel.idiomaActual == "es") ? "zh" : "es"
-                            chatViewModel.limpiarChat()
+                    IdiomaBotonView(idioma: idiomaSiguiente) {
+                        chatViewModel.idiomaActual = idiomaSiguiente
+                        Task {
+                            await chatViewModel.cambiarIdiomaConAnimacion()
                         }
-                    } label: {
-                        Image(systemName: "globe")
-                            .foregroundColor(.blue)
                     }
                 }
+                
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        enviarErroresPorCorreo()
+                    } label: {
+                        Label("Enviar reporte", systemImage: "envelope")
+                    }
+                }
+
             }
             
             .onAppear {
@@ -126,6 +144,14 @@ struct ContentView: View {
                     )
                 }
             }
+            .sheet(isPresented: $mostrarFormularioReporte) {
+                let historial = chatViewModel.mensajes.map { mensaje in
+                    let remitente = mensaje.esUsuario ? "Usuario" : "Asistente"
+                    return "[\(remitente)] \(mensaje.timestamp.formatoCompleto()):\n\(mensaje.texto)"
+                }.joined(separator: "\n\n")
+
+                ReporteErrorView(historialChat: historial)
+            }
             .alert("Error", isPresented: $chatViewModel.mostrarError) {
                 Button("OK") {
                     chatViewModel.mostrarError = false
@@ -139,6 +165,11 @@ struct ContentView: View {
             }
         }
     }
+    
+    private func enviarErroresPorCorreo() {
+        mostrarFormularioReporte = true
+    }
+
 }
 
 // MARK: - Vista de Chat Scrolleable
