@@ -21,6 +21,7 @@ class ChatViewModel: ObservableObject {
     @Published var mostrarError = false            // Indica si mostrar un mensaje de error
     @Published var mensajeError = ""               // Texto del mensaje de error
     @Published var idiomaActual: String = "es"     // Idioma actual (es, zh, en)
+    @Published var cambiandoIdioma = false
     
     // MARK: - Propiedades Privadas
     // Variables internas para controlar el estado de la aplicación
@@ -78,22 +79,38 @@ class ChatViewModel: ObservableObject {
     /// Analiza una imagen y obtiene una explicación legal
     /// - Parameter imagen: La imagen UIImage que se quiere analizar
     func enviarImagen(_ imagen: UIImage) async {
-        isLoading = true  // Mostrar indicador de carga
+        isLoading = true
+        mostrarError = false
+        mensajeError = ""
         
         do {
-            // Enviar imagen al servicio de análisis
-            let respuesta = try await apiService.analizarImagen(imagen)
-            mensajes.append(Mensaje(texto: respuesta, esUsuario: false))
+            // 1. Analizar la imagen con gpt-4o
+            let resumen = try await apiService.analizarImagen(imagen)
+
+            // 2. Enviar ese resumen al Assistant (mantiene el contexto del hilo)
+            let inputTexto = "📷 Resultado del análisis de imagen:\n\(resumen)"
+            let respuesta = try await assistantService.enviarMensaje(inputTexto)
+
+            // 3. Mostrar en la UI como parte de la conversación
+            agregarMensajeUsuario("📷 Imagen enviada.")
+            agregarMensajeAsistente(respuesta)
             
-            // Ocultar teclado automáticamente
-            hideKeyboard()
         } catch {
-            // Manejar errores de procesamiento de imagen
-            manejarError(error)
+            mostrarError = true
+            mensajeError = (error as? ErroresApp)?.errorDescription ?? error.localizedDescription
         }
         
-        isLoading = false  // Ocultar indicador de carga
+        isLoading = false
     }
+
+    func agregarMensajeUsuario(_ texto: String) {
+        mensajes.append(Mensaje(texto: texto, esUsuario: true))
+    }
+
+    func agregarMensajeAsistente(_ texto: String) {
+        mensajes.append(Mensaje(texto: texto, esUsuario: false))
+    }
+
     
     /// Limpia todo el historial de mensajes y reinicia el chat
     func limpiarChat() {
@@ -178,6 +195,41 @@ class ChatViewModel: ObservableObject {
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
+    
+    func notificarCambioIdioma() async {
+        let mensajeIdioma: String
+        switch idiomaActual {
+        case "zh":
+            mensajeIdioma = "从现在开始，请用中文回复。"
+        case "es":
+            mensajeIdioma = "A partir de ahora, responde en español."
+        default:
+            mensajeIdioma = "From now on, respond in English."
+        }
+
+        do {
+            let respuesta = try await assistantService.enviarMensaje(mensajeIdioma)
+            agregarMensajeUsuario(mensajeIdioma)
+            agregarMensajeAsistente(respuesta)
+        } catch {
+            manejarError(error)
+        }
+    }
+    func cambiarIdiomaConAnimacion() async {
+        // Mostrar animación
+        cambiandoIdioma = true
+        
+        // Reiniciar chat
+        limpiarChat()
+        
+        // Enviar mensaje de cambio de idioma a la IA
+        await notificarCambioIdioma()
+        
+        // Ocultar animación
+        cambiandoIdioma = false
+    }
+
+
 }
 
 // MARK: - Estado de UI para el selector de imágenes
